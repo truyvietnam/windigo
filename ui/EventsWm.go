@@ -9,18 +9,25 @@ import (
 	"github.com/rodrigocfd/windigo/win/co"
 )
 
+type _HashMsg struct {
+	msg   co.WM
+	mouse co.CMD
+}
+
 // Ordinary events for WM messages and WM_TIMER.
 // If an event for the given message already exists, it will be overwritten.
 // Used in native control subclassing.
 type _EventsWm struct {
-	msgsRet   map[co.WM]func(p wm.Any) uintptr // meaningful return value
-	msgsNoRet map[co.WM]func(p wm.Any)         // just returns zero (or TRUE if dialog)
-	tmrsNoRet map[uintptr]func()               // WM_TIMER
+	msgsRet        map[co.WM]func(p wm.Any) uintptr // meaningful return value
+	msgsNoRet      map[co.WM]func(p wm.Any)         // just returns zero (or TRUE if dialog)
+	msgsNoRetMouse map[_HashMsg]func(p wm.Any)
+	tmrsNoRet      map[uintptr]func() // WM_TIMER
 }
 
 func (me *_EventsWm) new() {
 	me.msgsRet = make(map[co.WM]func(p wm.Any) uintptr, 10) // arbitrary
 	me.msgsNoRet = make(map[co.WM]func(p wm.Any), 10)
+	me.msgsNoRetMouse = make(map[_HashMsg]func(p wm.Any), 10)
 	me.tmrsNoRet = make(map[uintptr]func(), 5)
 }
 
@@ -30,6 +37,9 @@ func (me *_EventsWm) clear() {
 	}
 	for key := range me.msgsNoRet {
 		delete(me.msgsNoRet, key)
+	}
+	for key := range me.msgsNoRetMouse {
+		delete(me.msgsNoRetMouse, key)
 	}
 	for key := range me.tmrsNoRet {
 		delete(me.tmrsNoRet, key)
@@ -46,6 +56,13 @@ func (me *_EventsWm) addMsgZero(uMsg co.WM, userFunc func(p wm.Any)) {
 	me.msgsNoRet[uMsg] = userFunc
 }
 
+func (me *_EventsWm) AddUserCustom(uMsg co.WM, mouse co.CMD, userFunc func(p wm.Any)) {
+	me.msgsNoRetMouse[_HashMsg{
+		msg:   uMsg,
+		mouse: mouse,
+	}] = userFunc
+}
+
 func (me *_EventsWm) hasMessages() bool {
 	return len(me.msgsRet) > 0 ||
 		len(me.msgsNoRet) > 0 ||
@@ -59,6 +76,11 @@ func (me *_EventsWm) processMessage(
 
 	msgObj := wm.Any{WParam: wParam, LParam: lParam}
 
+	hash := _HashMsg{
+		msg:   uMsg,
+		mouse: co.CMD(lParam.LoWord()),
+	}
+
 	if uMsg == co.WM_TIMER {
 		if userFunc, hasFunc := me.tmrsNoRet[uintptr(wParam)]; hasFunc {
 			userFunc() // always returns zero (or TRUE if dialog)
@@ -71,6 +93,8 @@ func (me *_EventsWm) processMessage(
 
 	} else if userFunc, hasFunc := me.msgsRet[uMsg]; hasFunc {
 		return userFunc(msgObj), true, true
+	} else if userFunc, hasFunc := me.msgsNoRetMouse[hash]; hasFunc {
+		userFunc(msgObj)
 	}
 
 	return 0, false, false
