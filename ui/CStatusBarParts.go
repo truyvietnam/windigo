@@ -31,8 +31,8 @@ type _StatusBarParts struct {
 
 func (me *_StatusBarParts) new(ctrl StatusBar) {
 	me.sb = ctrl
-	me.partsData = make([]_StatusBarPartData, 0, 5)
-	me.rightEdges = make([]int32, 0, 5)
+	me.partsData = make([]_StatusBarPartData, 1, 5)
+	me.rightEdges = make([]int32, 1, 5)
 	me.initialParentCx = 0
 }
 
