@@ -185,7 +185,7 @@ func (o *_WindowMainO) lateDefaults() {
 func WindowMainOpts() *_WindowMainO {
 	return &_WindowMainO{
 		classStyles: co.CS_DBLCLKS,
-		hBrushBkgnd: win.CreateSysColorBrush(co.COLOR_BTNFACE),
+		hBrushBkgnd: win.CreateSysColorBrush(co.COLOR_WINDOW),
 		wndStyles: co.WS_CAPTION | co.WS_SYSMENU | co.WS_CLIPCHILDREN |
 			co.WS_BORDER | co.WS_VISIBLE | co.WS_MINIMIZEBOX,
 		clientArea: win.SIZE{Cx: 500, Cy: 400},
